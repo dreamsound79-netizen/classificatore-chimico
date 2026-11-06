@@ -1,14 +1,16 @@
 # ====================================================================================================
 # PROGETTO: SISTEMA ESPERTO AUDIT E CLASSIFICAZIONE FORMULATI FINITI (REACH - CLP - ADR - GHS)
-# VERSIONE WEB APPLICATION STREAMLIT (INTERFACCIA GRAFICA PROFESSIONALE)
+# VERSIONE WEB STREAMLIT CON MANUALE D'USO E AMBITO NORMATIVO INTEGRATI NELL'APP
 # ====================================================================================================
 # 
-# 🎯 1. SCOPO E ARCHITETTURA:
-#    - Web Application per audit e conformità normativa di formulati finiti (Sezione 3 SDS / Batch Record).
-#    - Interfaccia reattiva Streamlit suddivisa in 2 sezioni operative:
-#        1. 🧪 AUDIT FORMULATO FINITO: inserimento distinta ricetta, calcolo additività CLP,
-#           assegnazione ADR con specifiche tecniche N.A.S., screening SVHC REACH e download scheda HTML.
-#        2. 🚚 CALCOLATORE ESENZIONE ADR (1.1.3.6): calcolo dei 1000 punti con conversione automatica Kg/Litri.
+# 🎯 1. SCOPO E ARCHITETTURA DEL SOFTWARE:
+#    - Web Application per audit e conformità normativa di formulati chimici finiti (Sezione 3 SDS / Batch Record).
+#    - Sezioni disponibili:
+#        1. 🧪 AUDIT FORMULATO FINITO: calcolo additività CLP, assegnazione ADR con specifiche tecniche
+#           N.A.S., screening SVHC REACH e download scheda HTML.
+#        2. 🚚 CALCOLATORE ESENZIONE ADR (1.1.3.6): calcolo 1000 punti con conversione Kg/Litri via densità.
+#        3. 📖 MANUALE D'USO & NORMATIVE: guida operativa, quadro normativo (CLP/REACH/ADR) e figure target.
+#        4. ⚡ ARCHIVIO SOSTANZE OFFLINE: gestione della cache locale.
 #
 # 🛑 2. REGOLA D'ORO OPERATIVA PER L'ASSISTENTE AI:
 #    - L'UTENTE NON È UN PROGRAMMATORE E NON EFFETTUA MODIFICHE MANUALI AL CODICE.
@@ -330,7 +332,7 @@ class IncompatibilityAnalyzer:
         cas_presenti = {item["info"]["cas"] for item in recipe if item["effective_conc"] > 0}
 
         if bool(cas_presenti & cls.ACIDI_FORTI) and bool(cas_presenti & cls.IPOCLORITI):
-            alerts.append("💀 PERICOLO LETALE: Miscela di Acido con Ipoclorito (Candeggina)! Sviluppo istantaneo di GAS CLORO TOSSICO E ASFISSIANTE (Cl2).")
+            alerts.append("💀 PERICOLO LETALE: Miscela di Acido con Ipoclorito (Candeggina)! Sviluppo istantaneo di GAS CLORO TOSSICO (Cl2).")
 
         if bool(cas_presenti & cls.ACIDI_FORTI) and bool(cas_presenti & cls.BASI_FORTI):
             alerts.append("⚠️ REAZIONE ESOTERMICA VIOLENTA: Co-presenza di Acido Forte e Base Forte. Rischio ebollizione istantanea e schizzi caustici.")
@@ -339,7 +341,7 @@ class IncompatibilityAnalyzer:
             alerts.append("🔥 RISCHIO INCENDIO / ESPLOSIONE: Ossidante Forte in contatto con Solventi Organici Infiammabili.")
 
         if "7697-37-2" in cas_presenti and bool(cas_presenti & cls.SOLVENTI_INFIAMMABILI):
-            alerts.append("💥 PERICOLO DEFLAGRAZIONE: L'Acido Nitrico con composti organici può formare miscele nitrate instabili.")
+            alerts.append("💥 PERICOLO DEFLAGRAZIONE: L'Acido Nitrico con composti organici forma composti nitrati instabili ed esplosivi.")
 
         return alerts
 
@@ -770,7 +772,6 @@ def process_formulation_audit(items: list) -> dict:
             "carrier_conc": carrier_val
         })
 
-    # Caso Monocomponente Puro (100%)
     if len(recipe) == 1 and recipe[0]["batch_conc"] >= 100.0 and recipe[0]["assay"] >= 100.0:
         single = recipe[0]["info"]
         cas = single["cas"]
@@ -804,7 +805,6 @@ def process_formulation_audit(items: list) -> dict:
             "total_batch": 100.0
         }
 
-    # Caso Miscela / Formulato Complesso
     total_batch_conc = sum(c["batch_conc"] for c in recipe)
     incomp_alerts = IncompatibilityAnalyzer.analyze(recipe)
 
@@ -915,26 +915,29 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    # Stile CSS professionale
     st.markdown("""
         <style>
-        .main-header { font-size: 26px; font-weight: bold; color: #1e3a8a; margin-bottom: 5px; }
-        .sub-header { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .main-header { font-size: 24px; font-weight: bold; color: #1e3a8a; margin-bottom: 5px; }
+        .sub-header { color: #64748b; font-size: 14px; margin-bottom: 20px; }
         .badge-danger { background-color: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: bold; }
         .badge-warning { background-color: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 6px; font-weight: bold; }
         .badge-ok { background-color: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-weight: bold; }
-        .metric-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         </style>
     """, unsafe_allow_html=True)
 
     # Sidebar Navigazione
     st.sidebar.image("https://img.icons8.com/fluency/96/test-tube.png", width=60)
     st.sidebar.title("Sistema Esperto EHS")
-    st.sidebar.caption("Standard: CLP (CE 1272/2008) • REACH • ADR 2025")
+    st.sidebar.caption("Audit Formulati • CLP • REACH • ADR 2025")
 
     mode = st.sidebar.radio(
         "Seleziona Funzionalità:",
-        ["🧪 Audit Formulato Finito", "🚚 Calcolatore Furgoni ADR (1.1.3.6)", "⚡ Archivio Sostanze Offline"]
+        [
+            "🧪 Audit Formulato Finito",
+            "🚚 Calcolatore Furgoni ADR (1.1.3.6)",
+            "📖 Manuale d'Uso & Normative",
+            "⚡ Archivio Sostanze Offline"
+        ]
     )
 
     # -----------------------------------------------------------------
@@ -942,7 +945,7 @@ def main():
     # -----------------------------------------------------------------
     if mode == "🧪 Audit Formulato Finito":
         st.markdown("<div class='main-header'>🧪 Verifica e Omologazione Formulato Finito</div>", unsafe_allow_html=True)
-        st.markdown("<div class='sub-header'>Inserisci la distinta degli ingredienti (Sezione 3 SDS o Batch Record) per verificare la conformità CLP, REACH e ADR.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-header'>Inserisci la distinta componenti (Sezione 3 SDS o Batch Record) per verificare la conformità CLP, REACH e ADR.</div>", unsafe_allow_html=True)
 
         col_input, col_preset = st.columns([3, 1])
 
@@ -980,12 +983,12 @@ def main():
 
             st.markdown("---")
 
-            # 1. Allarmi Incompatibilità
+            # 1. Incompatibilità
             if res["incomp_alerts"]:
                 for alert in res["incomp_alerts"]:
                     st.error(alert)
 
-            # 2. Allarmi REACH SVHC
+            # 2. REACH SVHC
             if res["reach_alerts"]:
                 for r in res["reach_alerts"]:
                     st.warning(r)
@@ -1011,7 +1014,7 @@ def main():
             if abs(res["total_batch"] - 100.0) > 0.5:
                 st.info(f"ℹ️ Nota Bilancio: Il totale dosato differisce dal 100% (Somma rilevata: {res['total_batch']:.1f}%)")
 
-            # 4. Due Colonne: CLP e ADR
+            # 4. Colonne CLP e ADR
             col_clp, col_adr = st.columns(2)
 
             with col_clp:
@@ -1044,7 +1047,7 @@ def main():
 
             st.markdown("---")
 
-            # 5. Download Scheda Tecnica HTML
+            # 5. Download Scheda
             st.subheader("📄 Esportazione Scheda di Omologazione")
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"omologazione_formulato_{timestamp}.html"
@@ -1061,7 +1064,7 @@ def main():
     # -----------------------------------------------------------------
     elif mode == "🚚 Calcolatore Furgoni ADR (1.1.3.6)":
         st.markdown("<div class='main-header'>🚚 Calcolatore Esenzione Trasporto ADR (Regola dei 1000 Punti)</div>", unsafe_allow_html=True)
-        st.markdown("<div class='sub-header'>Verifica se un quantitativo di solvente o formulato può viaggiare su normale furgone senza patentino ADR.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-header'>Verifica se un quantitativo di solvente o formulato può viaggiare su normale furgone senza patentino ADR (Cap. 1.1.3.6).</div>", unsafe_allow_html=True)
 
         col_chem, col_qty = st.columns(2)
         with col_chem:
@@ -1117,20 +1120,83 @@ def main():
                     st.success(f"""
                     ### 🟢 ESENZIONE PARZIALE ATTIVA (Totale Punti: {points:.1f})
                     * **Regime Operativo:** Trasportabile su furgone normale **SENZA patentino ADR (CFP)**, senza pannelli arancioni e senza kit ADR completo.
-                    * **Requisiti minimi:** Estintore da 2 kg a bordo e documento di trasporto con indicazione dei punti.
+                    * **Requisiti minimi:** Estintore da 2 kg a bordo e documento di trasporto con indicazione dei punti calcolati.
                     """)
                 else:
                     st.error(f"""
                     ### 🚨 SOGLIA 1000 PUNTI SUPERATA (Totale Punti: {points:.1f})
                     * **Regime Operativo:** **OBBLIGO REGIME ADR COMPLETO**.
-                    * **Requisiti:** Autista munito di patentino ADR (CFP), veicolo con pannelli arancioni aperti, istruzioni scritte di sicurezza e dotazione DPI/borsa ADR completa.
+                    * **Requisiti:** Autista munito di patentino ADR (CFP), veicolo con pannelli arancioni aperti, istruzioni scritte di emergenza e dotazione DPI/borsa ADR completa.
                     """)
 
             except Exception as e:
                 st.error(f"❌ Errore durante il calcolo: {e}")
 
     # -----------------------------------------------------------------
-    # SEZIONE 3: ARCHIVIO SOSTANZE LOCALE OFFLINE
+    # SEZIONE 3: MANUALE D'USO & QUADRO NORMATIVO (NUOVA)
+    # -----------------------------------------------------------------
+    elif mode == "📖 Manuale d'Uso & Normative":
+        st.markdown("<div class='main-header'>📖 Manuale Operativo & Quadro Normativo</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-header'>Guida tecnica per responsabili HSE, RSPP, tecnici di laboratorio e logistica trasporti.</div>", unsafe_allow_html=True)
+
+        tab_dest, tab_norm, tab_sintassi, tab_esenzione = st.tabs([
+            "🎯 Destinatari",
+            "⚖️ Normative Applicate",
+            "✍️ Guida all'Inserimento",
+            "🚚 Regola 1000 Punti ADR"
+        ])
+
+        with tab_dest:
+            st.markdown("### Figure Professionali di Riferimento")
+            st.markdown("""
+            * **Responsabili HSE e RSPP:**  
+              Verifica istantanea di conformità documentale per formulati e lotti in uscita; screening sistematico dei rischi chimici e prevenzione incidenti da incompatibilità nello stoccaggio e nella miscelazione.
+            * **Tecnici R&D e Operatori di Laboratorio/Formulazione:**  
+              Controllo immediato dei pericoli generati dalle nuove ricette; gestione automatizzata del **titolo commerciale (assay)** delle materie prime tecniche (es. acidi o basi in soluzione acquosa) per calcolare l'attivo effettivo e non sovrastimare i pericoli.
+            * **Ufficio Logistica, Spedizioni e Trasportatori:**  
+              Classificazione su strada e verifica immediata dei **1000 punti ADR (Cap. 1.1.3.6)** per stabilire all'istante se un ordine può partire con furgone ordinario senza patentino o necessita di regime ADR completo.
+            """)
+
+        with tab_norm:
+            st.markdown("### Quadro Normativo di Riferimento")
+            st.markdown("""
+            1. **Regolamento (CE) n. 1272/2008 (CLP / GHS):**  
+               Applicazione delle regole di **additività e soglie di pericolo generiche/specifiche** per infiammabilità (H225/H226), corrosione cutanea (H314), lesioni oculari (H318/H319), tossicità da aspirazione (H304) e sostanze CMR (H350, cancerogenesi $\ge 0{,}1\%$).
+            2. **Regolamento (CE) n. 1907/2006 (REACH):**  
+               Monitoraggio costante della **Candidate List (SVHC - Art. 57)** con soglia critica dello **$0{,}1\%$ peso/peso** (obblighi di notifica SCIP e Sezione 3 SDS) e controllo delle restrizioni d'uso dell'**Allegato XVII**.
+            3. **Accordo Internazionale ADR (Trasporto Merci Pericolose):**  
+               Attribuzione Numero ONU, Classe, Gruppo Imballo e Categoria di Trasporto. Applicazione della **Regola ADR 3.1.2.8.1** per l'indicazione automatica dei costituenti tecnici nelle designazioni N.A.S. (es. `UN 1993 LIQUIDO INFIAMMABILE, N.A.S. (contiene ACETONE e XILENE)`).
+            4. **Sicurezza dei Luoghi di Lavoro (D.Lgs. 81/2008):**  
+               Matrice automatica per la prevenzione di reazioni chimiche pericolose involontarie (es. sviluppo di gas cloro tossico da acidi + candeggina, reazioni esotermiche violente acido-base).
+            """)
+
+        with tab_sintassi:
+            st.markdown("### Guida alla Sintassi di Inserimento")
+            st.markdown("""
+            Il software accetta nomi comuni in italiano, denominazioni internazionali inglesi, numeri CAS e formule convenzionali:
+            
+            * **Formulato con percentuali finite già note:**  
+              `Acetone 40%, Xilene 30%, White Spirit 30%`
+            * **Formulato con materie prime tecniche e Titolo/Assay:**  
+              `Acido cloridrico (titolo 37%) 20%, Acqua 80%`  
+              *(Il sistema calcola in automatico l'attivo reale al 7.4% e assegna il 12.6% all'acqua vettore nel bilancio)*.
+            * **Componente singolo puro al 100%:**  
+              `Diclorometano` (oppure `DCM`, `Xilene`, `Toluene`)
+            """)
+
+        with tab_esenzione:
+            st.markdown("### Calcolo Esenzione Parziale ADR (Capitolo 1.1.3.6)")
+            st.markdown("""
+            La regola dei 1000 punti consente il trasporto di merci pericolose su veicoli ordinari **senza obbligo di patentino ADR (CFP)**, pannelli arancioni o kit DPI, purché il totale punti sia **$\le 1000$**:
+            
+            * **Categoria 1 (Materie molto pericolose):** Moltiplicatore $\\times 50$ (Max 20 unità).
+            * **Categoria 2 (Infiammabili PG II, es. Acetone, Toluene, Etanolo):** Moltiplicatore $\\times 3$ (Max 333 unità).
+            * **Categoria 3 (Infiammabili PG III, Corrosivi PG III, es. Xilene, DCM, Acquaragia):** Moltiplicatore $\\times 1$ (Max 1000 unità).
+            * **Conversione Densità:** Per i liquidi l'ADR conteggia i **Litri nominali**. Se l'operatore inserisce i **Chilogrammi** (dato da bilancia), l'app applica la densità reale del solvente per determinare i litri effettivi prima del calcolo.
+            """)
+
+    # -----------------------------------------------------------------
+    # SEZIONE 4: ARCHIVIO SOSTANZE LOCALE OFFLINE
     # -----------------------------------------------------------------
     elif mode == "⚡ Archivio Sostanze Offline":
         st.markdown("<div class='main-header'>⚡ Archivio Locale Offline delle Sostanze</div>", unsafe_allow_html=True)
